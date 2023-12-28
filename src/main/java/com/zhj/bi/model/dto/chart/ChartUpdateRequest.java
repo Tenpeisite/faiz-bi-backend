@@ -24,6 +24,12 @@ public class ChartUpdateRequest implements Serializable {
      */
     private String title;
 
+
+    /**
+     * 图表名称
+     */
+    private String name;
+
     /**
      * 内容
      */
