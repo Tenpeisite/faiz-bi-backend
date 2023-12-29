@@ -10,10 +10,12 @@ import com.zhj.bi.common.DeleteRequest;
 import com.zhj.bi.common.ErrorCode;
 import com.zhj.bi.common.ResultUtils;
 import com.zhj.bi.constant.CommonConstant;
+import com.zhj.bi.constant.RedisConstant;
 import com.zhj.bi.constant.UserConstant;
 import com.zhj.bi.exception.BusinessException;
 import com.zhj.bi.exception.ThrowUtils;
 import com.zhj.bi.manager.AiManager;
+import com.zhj.bi.manager.RedisLimiterManager;
 import com.zhj.bi.model.dto.chart.*;
 import com.zhj.bi.model.entity.Chart;
 import com.zhj.bi.model.entity.User;
@@ -51,6 +53,9 @@ public class ChartController {
 
     @Resource
     private AiManager aiManager;
+
+    @Resource
+    private RedisLimiterManager redisLimiterManager;
 
     private final static Gson GSON = new Gson();
 
@@ -265,6 +270,19 @@ public class ChartController {
         ThrowUtils.throwIf(StringUtils.isBlank(goal), ErrorCode.PARAMS_ERROR, "目标为空");
         ThrowUtils.throwIf(StringUtils.isBlank(name) && name.length() > 100, ErrorCode.PARAMS_ERROR, "名称过长");
         User loginUser = userService.getLoginUser(request);
+
+        //校验文件
+        long size = multipartFile.getSize();
+        final long ONE_MB = 1024 * 1024;
+        ThrowUtils.throwIf(size > ONE_MB, ErrorCode.PARAMS_ERROR, "文件超过1MB");
+        //校验后缀
+        String originalFilename = multipartFile.getOriginalFilename();
+        String png = originalFilename.substring(originalFilename.indexOf("."));
+
+        //限流
+        Long userId = loginUser.getId();
+        redisLimiterManager.doRateLimiter(RedisConstant.GENCHARTBYAI_LIMITE + userId);
+
 
         //分析需求：
         //分析网站用户的增长情况
