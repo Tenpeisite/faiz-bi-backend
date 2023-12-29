@@ -1,8 +1,7 @@
-package com.yupi.springbootinit.manager;
+package com.zhj.bi.manager;
 
 import javax.annotation.Resource;
 
-import com.zhj.bi.manager.CosManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 

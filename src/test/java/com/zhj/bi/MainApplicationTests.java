@@ -1,4 +1,4 @@
-package com.yupi.springbootinit;
+package com.zhj.bi;
 
 import com.zhj.bi.config.WxOpenConfig;
 import javax.annotation.Resource;
