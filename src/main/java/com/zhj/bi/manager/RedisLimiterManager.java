@@ -27,9 +27,9 @@ public class RedisLimiterManager {
      * @param key 区分不同的限流器，比如不同的用户 id 应该分别统计
      */
     public void doRateLimiter(String key){
-        // 创建限流器，每秒钟只能操作5次
+        // 创建限流器，每秒钟只能操作2次
         RRateLimiter rateLimiter = redissonClient.getRateLimiter(key);
-        rateLimiter.trySetRate(RateType.OVERALL, 5, 1, RateIntervalUnit.SECONDS);
+        rateLimiter.trySetRate(RateType.OVERALL, 2, 1, RateIntervalUnit.SECONDS);
 
         //每当一个操作过来的时候，根据用户权限不同拿不同数量的令牌
         //这样就能实现会员能够调用频率更高，非会员调用频率更低
