@@ -265,6 +265,13 @@ public class ChartController {
 
     /**
      * 智能分析（同步）
+     *        //分析需求：
+     *         //分析网站用户的增长情况
+     *         //原始数据：
+     *         //日期，用户数
+     *         //1号,10
+     *         //2号,20
+     *         //3号,30
      *
      * @param multipartFile
      * @param genChartByAiRequest
@@ -277,67 +284,27 @@ public class ChartController {
         String name = genChartByAiRequest.getName();
         String goal = genChartByAiRequest.getGoal();
         String chartType = genChartByAiRequest.getChartType();
-        //校验
-        ThrowUtils.throwIf(StringUtils.isBlank(goal), ErrorCode.PARAMS_ERROR, "目标为空");
-        ThrowUtils.throwIf(StringUtils.isBlank(name) && name.length() > 100, ErrorCode.PARAMS_ERROR, "名称过长");
-        User loginUser = userService.getLoginUser(request);
-
         //校验文件
-        long size = multipartFile.getSize();
-        final long ONE_MB = 1024 * 1024;
-        ThrowUtils.throwIf(size > ONE_MB, ErrorCode.PARAMS_ERROR, "文件超过1MB");
-        //校验后缀
-        String originalFilename = multipartFile.getOriginalFilename();
-        String png = originalFilename.substring(originalFilename.indexOf("."));
-
+        chartService.verifyFile(multipartFile, name, goal);
         //限流
+        User loginUser = userService.getLoginUser(request);
         Long userId = loginUser.getId();
         redisLimiterManager.doRateLimiter(RedisConstant.GENCHARTBYAI_LIMITE + userId);
 
-
-        //分析需求：
-        //分析网站用户的增长情况
-        //原始数据：
-        //日期，用户数
-        //1号,10
-        //2号,20
-        //3号,30
-
-        //构造用户输入
-        StringBuilder userInput = new StringBuilder();
-        userInput.append("分析需求：").append("\n");
-        //拼接分析目标
-        String userGoal = goal;
-        if (StringUtils.isNotBlank(chartType)) {
-            userGoal += "\n请使用" + chartType;
-        }
-        userInput.append(userGoal).append("\n");
         //压缩后的数据
-        String csvData = ExcelUtils.excelToCsv(multipartFile);
-        userInput.append("原始数据：").append("\n").append(csvData);
+        ExcelVO excelVO = ExcelUtils.excelToCsv(multipartFile);
+        //构造用户输入
+        StringBuilder userInput = chartService.getUserInput(multipartFile, goal, chartType,excelVO.getCsvData());
+        //调用ai
+        String[] splits = chartService.doChat(userInput);
 
-        long biModelId = 1659171950288818178L;
-        String result = aiManager.doChat(biModelId, userInput.toString());
-        String[] splits = result.split("【【【【【");
-        if (splits.length < 3) {
-            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "AI 生成错误");
-        }
         String genChart = splits[1].trim();
         String genResult = splits[2].trim();
-        //插入到数据库
-        Chart chart = new Chart();
-        chart.setGoal(goal);
-        chart.setName(name);
-        chart.setChartData(csvData);
-        chart.setChartType(chartType);
-        chart.setGenChart(genChart);
-        chart.setGenResult(genResult);
-        chart.setUserId(loginUser.getId());
-        chart.setStatus("succeed");
-        boolean flag = chartService.save(chart);
-        ThrowUtils.throwIf(!flag, ErrorCode.SYSTEM_ERROR, "图表保存失败");
-        //返回结果
-        BiResponse biResponse = new BiResponse(chart.getId(), genChart, genResult);
+        //调用ai并插入到数据库
+        BiResponse biResponse = chartService.saveChartInfo(new SaveChartDTO(goal, name, chartType, userId, "succeed", genChart, genResult));
+        //自定义sql创建表
+        chartService.createChart(excelVO.getDataList(),biResponse.getChartId());
+
         return ResultUtils.success(biResponse);
     }
 
@@ -392,14 +359,14 @@ public class ChartController {
         }
         userInput.append(userGoal).append("\n");
         //压缩后的数据
-        String csvData = ExcelUtils.excelToCsv(multipartFile);
-        userInput.append("原始数据：").append("\n").append(csvData);
+        ExcelVO excelVO = ExcelUtils.excelToCsv(multipartFile);
+        userInput.append("原始数据：").append("\n").append(excelVO.getCsvData());
 
         //插入到数据库
         Chart chart = new Chart();
         chart.setGoal(goal);
         chart.setName(name);
-        chart.setChartData(csvData);
+        chart.setChartData(excelVO.getCsvData());
         chart.setChartType(chartType);
         chart.setStatus("wait");
         chart.setUserId(loginUser.getId());
@@ -475,13 +442,13 @@ public class ChartController {
         redisLimiterManager.doRateLimiter(RedisConstant.GENCHARTBYAI_LIMITE + userId);
 
         //压缩后的数据
-        String csvData = ExcelUtils.excelToCsv(multipartFile);
+        ExcelVO excelVO = ExcelUtils.excelToCsv(multipartFile);
 
         //插入到数据库
         Chart chart = new Chart();
         chart.setGoal(goal);
         chart.setName(name);
-        chart.setChartData(csvData);
+        chart.setChartData(excelVO.getCsvData());
         chart.setChartType(chartType);
         chart.setStatus("wait");
         chart.setUserId(loginUser.getId());

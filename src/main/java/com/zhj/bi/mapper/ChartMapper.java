@@ -11,6 +11,9 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 */
 public interface ChartMapper extends BaseMapper<Chart> {
 
+    void createTableByExcelData(String sql);
+
+    void insertChart(String insertSql);
 }
 
 

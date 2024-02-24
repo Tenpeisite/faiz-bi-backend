@@ -27,4 +27,10 @@
         userId,createTime,updateTime,
         isDelete
     </sql>
+    <insert id="insertChart">
+        ${insertSql}
+    </insert>
+    <update id="createTableByExcelData">
+        ${sql}
+    </update>
 </mapper>

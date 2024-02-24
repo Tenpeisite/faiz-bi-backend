@@ -3,6 +3,7 @@ package com.zhj.bi.utils;
 import cn.hutool.core.collection.CollUtil;
 import com.alibaba.excel.EasyExcel;
 import com.alibaba.excel.support.ExcelTypeEnum;
+import com.zhj.bi.model.dto.chart.ExcelVO;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -28,7 +29,7 @@ import java.util.stream.Collectors;
 public class ExcelUtils {
 
 
-    public static String excelToCsv(MultipartFile multipartFile) {
+    public static ExcelVO excelToCsv(MultipartFile multipartFile) {
         //读取数据
         List<Map<Integer, String>> list = null;
         try {
@@ -43,7 +44,7 @@ public class ExcelUtils {
         }
         //System.out.println(list);
         if (CollUtil.isEmpty(list)) {
-            return "";
+            return null;
         }
         //转换为csv
         //读表头
@@ -58,7 +59,7 @@ public class ExcelUtils {
             stringBuilder.append(StringUtils.join(dataList, ",")).append("\n");
 
         }
-        return stringBuilder.toString();
+        return new ExcelVO(stringBuilder.toString(),list);
     }
 
     public static void main(String[] args) {
